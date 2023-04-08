@@ -1,0 +1,54 @@
+{
+  "name": "sensor-adapter-for-lego-ev3-stm8-version-public",
+  "type": "C51",
+  "dependenceList": [],
+  "srcDirs": [
+    "src"
+  ],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": []
+  },
+  "outDir": "build",
+  "deviceName": null,
+  "packDir": null,
+  "miscInfo": {
+    "uid": "0e9ff5056a2d10f23bf313a61dbb1026"
+  },
+  "targets": {
+    "Debug": {
+      "excludeList": [],
+      "toolchain": "SDCC",
+      "compileConfig": {
+        "options": "null"
+      },
+      "uploader": "STVP",
+      "uploadConfig": {
+        "deviceName": "STM8S103F3",
+        "bin": "",
+        "eepromFile": "null",
+        "optionByteFile": "null"
+      },
+      "uploadConfigMap": {
+        "Custom": {
+          "bin": "",
+          "commandLine": "",
+          "eraseChipCommand": ""
+        }
+      },
+      "custom_dep": {
+        "name": "default",
+        "incList": [
+          "src"
+        ],
+        "libList": [],
+        "sourceDirList": [],
+        "defineList": [
+          "STM8S103"
+        ]
+      }
+    }
+  },
+  "version": "3.3"
+}
