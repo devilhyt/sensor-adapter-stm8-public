@@ -19,7 +19,6 @@ Connect the power supply to the sensor and connect the signal pins of the sensor
 
 <table>
     <tbody>
-        <tr></tr>
         <tr>
             <td width="33%" align="center" valign="middle">Button</td>
             <td width="33%" align="center" valign="middle">Magnetic Switch</td>
@@ -55,7 +54,6 @@ Connect the power supply to the sensor and connect the signal pins of the sensor
                 <img src="img/light_sensor.JPG">
             </td>
         </tr>
-        <tr></tr>
     </tbody>
 </table>
 
@@ -71,7 +69,6 @@ In the EV3 port view, the following three modes are available:
 
 <table>
     <tbody>
-        <tr></tr>
         <tr>
             <td width="33%" align="center" valign="middle">Analog</td>
             <td width="33%" align="center" valign="middle">Digital</td>
@@ -89,7 +86,6 @@ In the EV3 port view, the following three modes are available:
                 <img src="img/portview_uptime.png">
             </td>
         </tr>
-        <tr></tr>
     </tbody>
 </table>
 
