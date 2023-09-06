@@ -38,7 +38,7 @@ Connect the power supply to the sensor and connect the signal pins of the sensor
         </tr>
         <tr></tr>
         <tr>
-            <td width="33%" align="center" valign="middle">Roation Sensor</td>
+            <td width="33%" align="center" valign="middle">Rotation Sensor</td>
             <td width="33%" align="center" valign="middle">Temperature Sensor</td>
             <td width="33%" align="center" valign="middle">Light Sensor</td>
         </tr>
