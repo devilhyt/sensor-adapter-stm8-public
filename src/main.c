@@ -13,11 +13,10 @@
 #include "adc1.h"
 #include "iwdg.h"
 #include "lump.h"
-#include "timer2.h"
 #include "timer4.h"
 #include "uart.h"
 
-/* sensor */
+/* sensor definition*/
 const lump_value_t raw           = {.low = 0, .high = 1023};
 const lump_value_t pct           = {.low = 0, .high = 100};
 const lump_value_t si            = {.low = 0, .high = 1023};
@@ -61,16 +60,13 @@ const lump_sensor_t sensor       = {.type      = 83,
 /* function prototypes */
 void init();
 void clk_init();
-// void gpio_init();
 void sensor_mode_init();
 void sensor_running();
 
 /* functions */
 void init() {
   clk_init();
-  tim2_init();
   tim4_init();
-  // gpio_init();
   iwdg_init();
   lump_sensor_init(&sensor);
   lump_set_sensor_mode_init_callback(&sensor_mode_init);
@@ -81,13 +77,6 @@ void init() {
 void clk_init() {
   sfr_CLK.CKDIVR.byte = 0x00; /* f_hsi = f_master = f_cpu = 16Mhz */
 }
-
-// void gpio_init() {
-//   /* on-board LED */
-//   sfr_PORTB.DDR.DDR5 = 1;
-//   sfr_PORTB.CR1.C15  = 1;
-//   sfr_PORTB.CR2.C25  = 1;
-// }
 
 void sensor_mode_init() {
   switch (lump_get_current_mode()) {

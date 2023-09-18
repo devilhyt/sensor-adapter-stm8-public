@@ -5,7 +5,7 @@
  * @version 0.1
  * @date 2022-02-10
  * 
- * @copyright Copyright (c) 2023
+ * @copyright Copyright (c) 2022
  * 
  */
 #include "lump.h"
@@ -68,7 +68,15 @@ void lump_transmit() {
       /* Handshake state machine */
       switch (lump_hsk_state) {
         case HskSync:
-          // hidden
+          lump_tx_buf[0] = SYS_SYNC;
+          if (uart_transmit(lump_tx_buf, 1) == TxOk) {
+            if (lump_sensor_ptr->with_xtal) {
+              lump_hsk_state = HskId;
+            } else {
+              lump_event_ms  = lump_last_ms;
+              lump_hsk_state = HskWaitForSync;
+            }
+          }
           break;
         /* Wait for sync from host
          * This state is exited through from the command processing code in the receive() function.
@@ -83,15 +91,38 @@ void lump_transmit() {
           break;
 
         case HskId:
-          // hidden
+          lump_tx_buf[0] = lump_msg_encode(MSG_CMD, 1, CMD_TYPE);
+          lump_tx_buf[1] = lump_sensor_ptr->type;
+          lump_tx_buf[2] = lump_msg_checksum(lump_tx_buf, 2);
+          if (uart_transmit(lump_tx_buf, 3) == TxOk)
+            lump_hsk_state = HskModes;
           break;
 
         case HskModes:
-          // hidden
+          lump_tx_buf[1] = lump_sensor_ptr->mode_num - 1;
+          if (lump_sensor_ptr->view == VIEW_DEFAULT) {
+            lump_tx_buf[0] = lump_msg_encode(MSG_CMD, 1, CMD_MODES);
+            lump_tx_buf[2] = lump_msg_checksum(lump_tx_buf, 2);
+            if (uart_transmit(lump_tx_buf, 3) == TxOk)
+              lump_hsk_state = HskSpeed;
+          } else {
+            lump_tx_buf[0] = lump_msg_encode(MSG_CMD, 2, CMD_MODES);
+            lump_tx_buf[2] = lump_sensor_ptr->view - 1;
+            lump_tx_buf[3] = lump_msg_checksum(lump_tx_buf, 3);
+            if (uart_transmit(lump_tx_buf, 4) == TxOk)
+              lump_hsk_state = HskSpeed;
+          }
           break;
 
         case HskSpeed:
-          // hidden
+          lump_tx_buf[0] = lump_msg_encode(MSG_CMD, 4, CMD_SPEED);
+          lump_memcpy_be2le(&lump_tx_buf[1], &(lump_sensor_ptr->speed), 4);
+          lump_tx_buf[5] = lump_msg_checksum(lump_tx_buf, 5);
+          if (uart_transmit(lump_tx_buf, 6) == TxOk) {
+            lump_hsk_mode_ptr   = NULL;
+            lump_hsk_mode_index = 0;
+            lump_hsk_state  = HskModesName;
+          }
           break;
 
         case HskModesName: {
@@ -123,7 +154,17 @@ void lump_transmit() {
           break;
         }
         case HskModesFormat:
-          // hidden
+          lump_tx_buf[0] = lump_msg_encode(MSG_INFO, 4, lump_hsk_mode_index);
+          lump_tx_buf[1] = INFO_FORMAT;
+          lump_tx_buf[2] = lump_hsk_mode_ptr->data_sets;
+          lump_tx_buf[3] = lump_hsk_mode_ptr->data_type;
+          lump_tx_buf[4] = lump_hsk_mode_ptr->figures;
+          lump_tx_buf[5] = lump_hsk_mode_ptr->decimals;
+          lump_tx_buf[6] = lump_msg_checksum(lump_tx_buf, 6);
+          if (uart_transmit(lump_tx_buf, 7) == TxOk) {
+            lump_event_ms  = lump_last_ms;
+            lump_hsk_state = HskModesPause;
+          }
           break;
 
         case HskModesPause:
@@ -137,7 +178,11 @@ void lump_transmit() {
           break;
 
         case HskAck:
-          // hidden
+          lump_tx_buf[0] = SYS_ACK;
+          if (uart_transmit(lump_tx_buf, 1) == TxOk) {
+            lump_event_ms  = lump_last_ms;
+            lump_hsk_state = HskWaitForAck;
+          }
           break;
 
         /* Wait for ACK reply
@@ -175,7 +220,10 @@ void lump_transmit() {
       break;
 
     case SensorNack:
-      // hidden
+      lump_tx_buf[0] = SYS_NACK;
+      while (uart_transmit(lump_tx_buf, 1) == TxBusy)
+        ;
+      lump_sensor_state = SensorRunning;
       break;
 
     default:
@@ -201,7 +249,20 @@ void lump_receive() {
         break;
       }
       case ReceiveCheckMsgType: {
-        // hidden
+        if (byte_received == SYS_SYNC || byte_received == SYS_NACK || byte_received == SYS_ACK) { /* New system message */
+          lump_rx_buf[0]     = byte_received;
+          lump_receive_state = RecevieOperate;
+        } else { /* Other types of messages */
+          lump_rx_len = lump_exp2((byte_received & MSGLEN_MASK) >> MSGLEN_SHIFT) + 2;
+          if (lump_rx_len <= MAX_MSG_LEN) {
+            lump_rx_index      = 0;
+            lump_rx_checksum   = 0xFF;
+            lump_receive_state = ReceiveDecode;
+          } else { /* Payload length too long. look for next message */
+            lump_rx_len        = 0;
+            lump_receive_state = ReceiveGetByte;
+          }
+        }
         break;
       }
       case ReceiveDecode: {
@@ -227,7 +288,32 @@ void lump_receive() {
         break;
       }
       case RecevieOperate: {
-        // hidden
+        if (lump_rx_buf[0] == SYS_NACK) {
+          iwdg_refresh();
+          lump_nack_force_send = true;
+          return;
+        }
+
+        switch (lump_sensor_state) {
+          /* Handle host messages in handshake */
+          case SensorHandshake: {
+            if (lump_hsk_state == HskWaitForSync && lump_rx_buf[0] == SYS_SYNC)
+              lump_hsk_state = HskId; /* Sync sucess, start handshake */
+            if (lump_hsk_state == HskWaitForAck && lump_rx_buf[0] == SYS_ACK)
+              lump_hsk_state = HskSwitchBaudRate; /* Ack received, start data mode */
+            break;
+          }
+          /* Handle host messages in running condition */
+          case SensorRunning: {
+            if (lump_rx_buf[0] == (MSG_CMD | CMD_SELECT)) { /* Select mode */
+              lump_current_mode = lump_rx_buf[1];
+              lump_sensor_state = SensorModeInit;
+            }
+            break;
+          }
+          default:
+            break;
+        }
         return;
       }
       default:
@@ -239,11 +325,25 @@ void lump_receive() {
 }
 
 static tx_status_t lump_hsk_mode_name_symbol(char *ptr, u8 info_type) {
-  // hidden
+  u8 len = strlen(ptr);
+  memcpy(&lump_tx_buf[2], ptr, len); // No zero termination necessary
+  len                  = lump_ceil_power2(len);
+  lump_tx_buf[0]       = lump_msg_encode(MSG_INFO, len, lump_hsk_mode_index);
+  lump_tx_buf[1]       = info_type;
+  lump_tx_buf[len + 2] = lump_msg_checksum(lump_tx_buf, len + 2);
+  return uart_transmit(lump_tx_buf, len + 3);
 }
 
 static tx_status_t lump_hsk_mode_value(lump_value_t *ptr, u8 info_type) {
-  // hidden
+  if (ptr) {
+    lump_tx_buf[0] = lump_msg_encode(MSG_INFO, 8, lump_hsk_mode_index);
+    lump_tx_buf[1] = info_type;
+    lump_memcpy_be2le(&lump_tx_buf[2], &(ptr->low), 4);
+    lump_memcpy_be2le(&lump_tx_buf[6], &(ptr->high), 4);
+    lump_tx_buf[10] = lump_msg_checksum(lump_tx_buf, 10);
+    return uart_transmit(lump_tx_buf, 11);
+  }
+  return TxOk;
 }
 
 static void *lump_memcpy_be2le(void *dst, const void *src, size_t len) {
@@ -336,7 +436,13 @@ tx_status_t lump_send_data8(u8 b) {
 }
 
 tx_status_t lump_send_data8_array(u8 *b, u8 len) {
-  // hidden
+  lump_tx_buf[0] = lump_msg_encode(MSG_DATA, len, lump_current_mode);
+  lump_memcpy_be2le(&lump_tx_buf[1], b, len);
+  lump_tx_buf[len + 1] = lump_msg_checksum(lump_tx_buf, len + 1);
+  tx_status_t status   = uart_transmit(lump_tx_buf, len + 2);
+  if (status)
+    lump_nack_force_send = false;
+  return status;
 }
 
 tx_status_t lump_send_data16(u16 s) {

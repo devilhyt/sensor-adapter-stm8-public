@@ -5,7 +5,7 @@
  * @version 0.1
  * @date 2022-02-10
  *
- * @copyright Copyright (c) 2023
+ * @copyright Copyright (c) 2022
  *
  */
 #include "timer4.h"
@@ -25,10 +25,5 @@ u32 millis() {
 
 ISR_HANDLER(IRQN_TIM4_handler, _TIM4_OVR_UIF_VECTOR_) {
   ++tim4_cnt;
-  // ++led_cnt;
-  // if (led_cnt >= 1000) {
-  //   sfr_PORTB.ODR.ODR5 ^= 1;
-  //   led_cnt = 0;
-  // }
   sfr_TIM4.SR.UIF = 0;
 }

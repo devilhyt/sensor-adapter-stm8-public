@@ -1,5 +1,5 @@
 {
-  "name": "sensor-adapter-for-lego-ev3-stm8-version-public",
+  "name": "sensor-adapter-stm8-public",
   "type": "C51",
   "dependenceList": [],
   "srcDirs": [
