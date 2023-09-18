@@ -20,7 +20,13 @@ void tim4_init() {
 }
 
 u32 millis() {
-  return tim4_cnt;
+  u32 tmp;
+
+  __critical {
+    tmp = tim4_cnt;
+  }
+  
+  return tmp;
 }
 
 ISR_HANDLER(IRQN_TIM4_handler, _TIM4_OVR_UIF_VECTOR_) {
