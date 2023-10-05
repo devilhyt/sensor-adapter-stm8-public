@@ -239,7 +239,7 @@ void lump_receive() {
   while (true) {
     switch (lump_receive_state) {
       case ReceiveGetByte: {
-        if (!uart_available())
+        if (uart_rx_buf_is_empty())
           return;
         byte_received = uart_read();
         if (lump_rx_len == 0)

@@ -69,13 +69,23 @@ tx_status_t uart_switch_baudrate(const u32 baudrate);
 tx_status_t uart_transmit(u8 *msg, u8 msg_len);
 
 /**
- * @brief Check if UART1 is available
+ * @brief Check if UART1 RX buffer is empty
  *
- * @return bool UART availability
- * @retval true UART is available
- * @retval false UART is not available
+ * @return bool Whether the UART RX buffer is empty
+ * @retval true empty
+ * @retval false otherwise
  */
-bool uart_available();
+bool uart_rx_buf_is_empty();
+
+
+/**
+ * @brief Check if UART1 RX buffer is full
+ *
+ * @return bool Whether the UART RX buffer is full
+ * @retval true full
+ * @retval false otherwise
+ */
+bool uart_rx_buf_is_full();
 
 /**
  * @brief Read message from UART1

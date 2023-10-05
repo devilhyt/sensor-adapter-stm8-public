@@ -45,8 +45,11 @@ ISR_HANDLER(IRQN_UART_TX_handler, _UART1_T_TC_VECTOR_) {
 }
 
 ISR_HANDLER(IRQN_UART_RX_handler, _UART1_R_RXNE_VECTOR_) {
-  uart_rx_buf[uart_rx_buf_head++] = sfr_UART1.DR.byte;
-  uart_rx_buf_head %= UART_RX_BUF_SIZE; /* circular */
+  u8 c = sfr_UART1.DR.byte;
+  if(!uart_rx_buf_is_full()) {
+    uart_rx_buf[uart_rx_buf_head++] = c;
+    uart_rx_buf_head %= UART_RX_BUF_SIZE; /* circular */
+  }
 }
 
 tx_status_t uart_switch_baudrate(const u32 baudrate) {
@@ -78,13 +81,17 @@ tx_status_t uart_transmit(u8 *msg, u8 msg_len) {
 }
 
 u8 uart_read() {
-  if (!uart_available())
+  if (uart_rx_buf_is_empty())
     return 255; /* no data (-1)*/
   u8 data = uart_rx_buf[uart_rx_buf_tail++];
   uart_rx_buf_tail %= UART_RX_BUF_SIZE; /* circular */
   return data;
 }
 
-bool uart_available() {
-  return (uart_rx_buf_head != uart_rx_buf_tail);
+bool uart_rx_buf_is_empty() {
+  return (uart_rx_buf_head == uart_rx_buf_tail);
+}
+
+bool uart_rx_buf_is_full() {
+  return ((uart_rx_buf_head + 1) % UART_RX_BUF_SIZE == uart_rx_buf_tail);
 }
