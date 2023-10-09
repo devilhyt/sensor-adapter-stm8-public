@@ -16,7 +16,7 @@
 #include "timer4.h"
 #include "uart.h"
 
-/* sensor definition*/
+/* sensor definition */
 const lump_value_t raw           = {.low = 0, .high = 1023};
 const lump_value_t pct           = {.low = 0, .high = 100};
 const lump_value_t si            = {.low = 0, .high = 1023};
@@ -63,7 +63,7 @@ void clk_init();
 void sensor_mode_init();
 void sensor_running();
 
-/* functions */
+
 void init() {
   clk_init();
   tim4_init();
